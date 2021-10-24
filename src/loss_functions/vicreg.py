@@ -69,11 +69,15 @@ def covariance_loss(z1: torch.Tensor, z2: torch.Tensor) -> torch.Tensor:
     cov_z2 = (z2.T @ z2) / (N - 1)
 
     diag = torch.eye(D, device=z1.device)
-    cov_loss = cov_z1[~diag.bool()].pow_(2).sum() / D + cov_z2[~diag.bool()].pow_(2).sum() / D
+    cov_loss = (
+        cov_z1[~diag.bool()].pow_(2).sum() / D
+        + cov_z2[~diag.bool()].pow_(2).sum() / D
+    )
     return cov_loss
 
-def cosine_similarity_loss(p, z): # distance
-    z = z.detach() # stop gradient
+
+def cosine_similarity_loss(p, z):  # distance
+    z = z.detach()  # stop gradient
     return -(F.cosine_similarity(p, z).mean())
 
 
@@ -100,8 +104,13 @@ def vicreg_loss_func(
     var_loss = variance_loss(z1, z2)
     cov_loss = covariance_loss(z1, z2)
 
-    loss = sim_loss_weight * sim_loss + var_loss_weight * var_loss + cov_loss_weight * cov_loss
+    loss = (
+        sim_loss_weight * sim_loss
+        + var_loss_weight * var_loss
+        + cov_loss_weight * cov_loss
+    )
     return loss, sim_loss, var_loss, cov_loss
+
 
 def simsiam_vicreg_loss_func(
     z1: torch.Tensor,
@@ -112,11 +121,17 @@ def simsiam_vicreg_loss_func(
     var_loss_weight: float = 25.0,
     cov_loss_weight: float = 1.0,
 ) -> torch.Tensor:
-                
-    sim_loss = (cosine_similarity_loss(p1, z2) + cosine_similarity_loss(p2, z1))/2
-#     sim_loss = invariance_loss(z1, z2)
+
+    sim_loss = (
+        cosine_similarity_loss(p1, z2) + cosine_similarity_loss(p2, z1)
+    ) / 2
+    #     sim_loss = invariance_loss(z1, z2)
     var_loss = variance_loss(z1, z2)
     cov_loss = covariance_loss(z1, z2)
 
-    loss = sim_loss_weight * sim_loss + var_loss_weight * var_loss + cov_loss_weight * cov_loss
+    loss = (
+        sim_loss_weight * sim_loss
+        + var_loss_weight * var_loss
+        + cov_loss_weight * cov_loss
+    )
     return loss, sim_loss, var_loss, cov_loss
