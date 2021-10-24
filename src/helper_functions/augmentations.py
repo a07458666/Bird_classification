@@ -17,6 +17,7 @@ class GaussianBlur(object):
         x = x.filter(ImageFilter.GaussianBlur(radius=sigma))
         return x
 
+
 def all_in_aug():
     all_in_transform = transforms.Compose(
         [

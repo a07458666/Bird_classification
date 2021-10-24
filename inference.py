@@ -11,8 +11,13 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from src.txt_loading.txt_loader import readClassIdx, readTestImagesPath, splitDataList
+from src.txt_loading.txt_loader import (
+    readClassIdx,
+    readTestImagesPath,
+    splitDataList,
+)
 from src.helper_functions.augmentations import get_eval_trnsform
+
 
 def main(args):
     device = checkGPU()
@@ -42,12 +47,14 @@ def checkGPU():
         print("CUDA is not available.")
     return device
 
+
 def loadModel(args, device):
     with torch.no_grad():
         model = torch.load(args.model_path)
         model.load_state_dict(torch.load(args.model_path_dict)["state_dict"])
         model.eval().to(device)
     return model
+
 
 def predict(root, path, trans, device, model, class_to_idx):
     img = Image.open(os.path.join(root, path)).convert("RGB")

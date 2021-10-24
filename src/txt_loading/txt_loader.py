@@ -28,9 +28,9 @@ def readTestImagesPath(args):
 def splitDataList(data_list, train_rate=0.8, val_rate=0.1):
     train_data_list = data_list[: int(len(data_list) * train_rate)]
     val_data_list = data_list[
-        int(len(data_list) * train_rate) : int(
+        int(len(data_list) * train_rate):int(
             len(data_list) * (train_rate + val_rate)
         )
     ]
-    test_data_list = data_list[int(len(data_list) * (train_rate + val_rate)) :]
+    test_data_list = data_list[int(len(data_list) * (train_rate + val_rate)):]
     return train_data_list, val_data_list, test_data_list

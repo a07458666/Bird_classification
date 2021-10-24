@@ -14,7 +14,11 @@ from torchvision import datasets, transforms
 import torchvision.models as models
 
 from src.data_loading.data_loader import BirdImageLoader
-from src.txt_loading.txt_loader import readClassIdx, readTrainImages, splitDataList
+from src.txt_loading.txt_loader import (
+    readClassIdx,
+    readTrainImages,
+    splitDataList,
+)
 from src.helper_functions.augmentations import get_eval_trnsform
 
 
@@ -50,6 +54,7 @@ def checkGPU():
         device = torch.device("cpu")
         print("CUDA is not available.")
     return device
+
 
 def accuracy(output, target, topk=(1,)):
     """Computes the accuracy over the k top predictions
