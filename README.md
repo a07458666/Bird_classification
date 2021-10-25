@@ -1,15 +1,13 @@
->📋  A template README.md for code accompanying a Machine Learning paper
-
 # Bird_classification
 
-This repository is the implementation of [CodaLab competitions bird classification](https://reurl.cc/pxr8YQ). 
+This repository is the implementation of CodaLab competitions [bird classification](https://reurl.cc/pxr8YQ). 
 
 ## Requirements
 
 To install requirements:
 
 ```setup
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Training
@@ -59,4 +57,4 @@ Our model achieves the following performance on :
 
 | Model name         | Top 1 Accuracy  | Top 5 Accuracy |
 | ------------------ |---------------- | -------------- |
-| My awesome model   |     82.657%     |      NA        |
+| My best model      |     82.657%     |      NA        |
