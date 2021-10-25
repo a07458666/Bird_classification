@@ -2,61 +2,61 @@
 
 # Bird_classification
 
-This repository is the official implementation of [My Paper Title](https://arxiv.org/abs/2030.12345). 
-
->📋  Optional: include a graphic explaining your approach/main result, bibtex entry, link to demos, blog posts and tutorials
+This repository is the implementation of [CodaLab competitions bird classification](https://reurl.cc/pxr8YQ). 
 
 ## Requirements
 
 To install requirements:
 
 ```setup
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
-
->📋  Describe how to set up the environment, e.g. pip/conda/docker commands, download datasets, etc...
 
 ## Training
 
-To train the model(s) in the paper, run this command:
+To train the model(s), run this command:
 
 ```train
-python train.py --input-data <path_to_data> --alpha 10 --beta 20
+python train.py --data_path <train_data_path> --classes_path <classes.txt> --training_labels_path <training_labels.txt> --batch_size 8 --lr 2e-4 --pretrain_model_path <pretrain_model_path> --output_foloder <model output path> --epochs 100
 ```
 
->📋  Describe how to train the models, with example commands on how to train the models in your paper, including the full training procedure and appropriate hyperparameters.
+* scheduler use `ReduceLROnPlateau`
+* optimizer  use `SGD`, momentum = 0.9, weight_decay = 1e-4
+* Data augmentation(RandomResizedCrop, RandomHorizontalFlip, ColorJitter, RandomRotation, GaussianBlur)
 
 ## Evaluation
 
-To evaluate my model on ImageNet, run:
+To evaluate my model, run:
 
 ```eval
-python eval.py --model-file mymodel.pth --benchmark imagenet
+python eval.py --data_path <eval_data_path> --classes_path <classes.txt> --training_labels_path <training_labels.txt> --model_path <model_path>
 ```
 
->📋  Describe how to evaluate the trained models on benchmarks reported in the paper, give commands that produce the results (section below).
+## Reproduceing Submission
 
+```inference
+python inference.py --data_path <test_image_path> --classes_path <classes.txt> --test_filename_path <testing_img_order.txt> --model_path <model_path>
+```
+>📋 Will output `answer.txt`
 ## Pre-trained Models
 
 You can download pretrained models here:
 
-- [My awesome model](https://drive.google.com/mymodel.pth) trained on ImageNet using parameters x,y,z. 
+- [ImageNet-21K Pretraining for the Masses
+](https://github.com/Alibaba-MIIL/ImageNet21K) trained on ImageNet.
 
->📋  Give a link to where/how the pretrained models can be downloaded and how they were trained (if applicable).  Alternatively you can have an additional column in your results table with a link to the models.
+- Or use timm to load the model
+
+```
+model = timm.create_model('vit_base_patch16_224_miil_in21k', pretrained=True)
+```
 
 ## Results
 
 Our model achieves the following performance on :
 
-### [Image Classification on ImageNet](https://paperswithcode.com/sota/image-classification-on-imagenet)
+### Image Classification
 
 | Model name         | Top 1 Accuracy  | Top 5 Accuracy |
 | ------------------ |---------------- | -------------- |
-| My awesome model   |     85%         |      95%       |
-
->📋  Include a table of results from your paper, and link back to the leaderboard for clarity and context. If your main result is a figure, include that figure and link to the command or notebook to reproduce it. 
-
-
-## Contributing
-
->📋  Pick a licence and describe how to contribute to your code repository. 
+| My awesome model   |     82.657%     |      NA        |
