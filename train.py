@@ -20,11 +20,9 @@ from src.txt_loading.txt_loader import (
     splitDataList,
 )
 from src.loss_functions.CrossEntropyLS import CrossEntropyLS
-
+from torch.utils.tensorboard import SummaryWriter
 
 def main(args):
-    from torch.utils.tensorboard import SummaryWriter
-
     writer = create_writer(args)
     return
     device = checkGPU()
@@ -199,12 +197,10 @@ def create_writer(args):
     from torch.utils.tensorboard import SummaryWriter
 
     writer = SummaryWriter("runs/" + args.output_foloder)
+    msg = ''
     for key in vars(args):
-        msg = "{} = {}".format(key, vars(args)[key])
-        print(msg)
-        writer.add_text("Remark", msg, 0)
-    # writer.add_text('Remark', 'batch_size = {}'.format(args.batch_size) , 0)
-    # writer.add_text('Remark', 'test!!!' , 0)
+        msg += "{} = {}<br>".format(key, vars(args)[key])
+    writer.add_text("Parameter", msg, 0)
     writer.flush()
     writer.close()
     return writer
