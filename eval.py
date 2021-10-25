@@ -138,7 +138,6 @@ def create_dataloader(args, data_list, class_to_idx, trans):
 def loadModel(args, device):
     with torch.no_grad():
         model = torch.load(args.model_path)
-        model.load_state_dict(torch.load(args.model_path_dict)["state_dict"])
         model.eval().to(device)
     return model
 
@@ -162,11 +161,6 @@ if __name__ == "__main__":
         "--model_path",
         type=str,
         default="./model/model_bird_vit_AllData/checkpoint.pth.tar",
-    )
-    parser.add_argument(
-        "--model_path_dict",
-        type=str,
-        default="./model/model_bird_vit_AllData/checkpoint_0047.pth.tar",
     )
     parser.add_argument(
         "--batch_size",
