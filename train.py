@@ -10,7 +10,6 @@ from torch import optim
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import MultiStepLR, StepLR, ReduceLROnPlateau
 from matplotlib import pyplot as plt
-from IPython.display import clear_output
 from torch.cuda.amp import GradScaler, autocast
 
 from src.data_loading.data_loader import BirdImageLoader
@@ -21,14 +20,14 @@ from src.txt_loading.txt_loader import (
 )
 from src.loss_functions.CrossEntropyLS import CrossEntropyLS
 from torch.utils.tensorboard import SummaryWriter
+from src.models.swin_transformer import SwinTransformer
 
 def main(args):
     writer = create_writer(args)
-    return
     device = checkGPU()
     class_to_idx = readClassIdx(args)
     data_list = readTrainImages(args)
-    train_data_list, val_data_list, _ = splitDataList(data_list)
+    train_data_list, val_data_list, _ = splitDataList(data_list, 0.9, 0.1)
     model = create_model(args, device)
     train_loader, val_loader = create_dataloader(
         args, train_data_list, val_data_list, class_to_idx
@@ -62,7 +61,6 @@ def checkGPU():
 
 
 def update_loss_hist(args, train_list, val_list, name="result"):
-    clear_output(wait=True)
     plt.plot(train_list)
     plt.plot(val_list)
     plt.title(name)
@@ -70,27 +68,35 @@ def update_loss_hist(args, train_list, val_list, name="result"):
     plt.xlabel("Epoch")
     plt.legend(["train", "val"], loc="center right")
     plt.savefig("{}/{}.png".format(args.output_foloder, name))
-    # plt.show()
+    plt.clf()
 
 
 def create_model(args, device):
     import timm
-
-    backbone = timm.create_model(
-        "vit_base_patch16_224_miil_in21k", pretrained=True
-    )
-
+    # backbone = timm.create_model(
+    #     "vit_base_patch16_224_miil_in21k", pretrained=True
+    # )
+    backbone = SwinTransformer(
+        img_size = 224,
+        window_size = 7,
+        embed_dim = 192,
+        depths = [ 2, 2, 18, 2 ],
+        num_heads = [ 6, 12, 24, 48 ],
+        num_classes = 21841,
+        drop_path_rate = 0.1)
     if args.pretrain_model_path != '':
-        backbone = torch.load(args.pretrain_model_path).to(device)
-        set_parameter_requires_grad(backbone, False)
-
+        # backbone = torch.load(args.pretrain_model_path).to(device)
+        checkpoint = torch.load(args.pretrain_model_path, map_location='cpu') 
+        msg = backbone.load_state_dict(checkpoint['model'], strict=False) 
+        # backbone.load_state_dict(torch.load(args.pretrain_model_path)['model']).to(device)
+        # set_parameter_requires_grad(backbone, True)
     projector = nn.Sequential(
-        nn.Linear(11221, 2048),
+        nn.Linear(21841, 2048),
         nn.BatchNorm1d(2048),
-        nn.ReLU(),
+        nn.LeakyReLU(),
         nn.Linear(2048, 512),
         nn.BatchNorm1d(512),
-        nn.ReLU(),
+        nn.LeakyReLU(),
         nn.Linear(512, 200),
     )
     model = nn.Sequential(backbone, projector).to(device)
@@ -101,9 +107,10 @@ def create_dataloader(args, train_data_list, val_data_list, class_to_idx):
     from src.helper_functions.augmentations import (
         get_aug_trnsform,
         get_eval_trnsform,
+        get_all_in_aug,
     )
 
-    trans_aug = get_eval_trnsform()
+    trans_aug = get_all_in_aug()
     trans_eval = get_eval_trnsform()
     dataset_train = BirdImageLoader(
         args.data_path, train_data_list, class_to_idx, transform=trans_aug
@@ -276,11 +283,11 @@ def train(args, model, train_loader, val_loader, writer, device):
             args, train_acc_top1_history, val_acc_top1_history, "Top1"
         )
         if val_loss <= min_val_loss:
-            val_loss = min_val_loss
+            min_val_loss = val_loss
             torch.save(
                 model,
-                "{}/checkpoint_{:04d}.pth.tar".format(
-                    args.output_foloder, epoch + 1
+                "{}/checkpoint.pth.tar".format(
+                    args.output_foloder
                 ),
             )
         else:
@@ -288,7 +295,6 @@ def train(args, model, train_loader, val_loader, writer, device):
             if stop > 5:
                 print("early stopping")
                 break
-    torch.save(model, "{}/checkpoint.pth.tar".format(args.output_foloder))
     torch.cuda.empty_cache()
 
 
@@ -325,7 +331,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--weight_decay",
         type=float,
-        default=1e-4,
+        default=0.007,
     )
     parser.add_argument(
         "--momentum",
@@ -340,7 +346,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--pretrain_model_path",
         type=str,
-        default="model/model_bird_vic_simsiam_pretrain/checkpoint.pth.tar",
+        default="",
     )
     parser.add_argument(
         "--output_foloder",
