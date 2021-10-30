@@ -32,6 +32,8 @@ python eval.py --data_path <eval_data_path> --classes_path <classes.txt> --train
 
 ## Reproduceing Submission
 
+[model link](https://drive.google.com/file/d/1FXQF4Pbpco3FkNbiQxSbN__ZSSd-ypsV/view?usp=sharing)
+
 ```inference
 python inference.py --data_path <test_image_path> --classes_path <classes.txt> --test_filename_path <testing_img_order.txt> --model_path <model_path>
 ```
