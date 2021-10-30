@@ -18,25 +18,26 @@ class GaussianBlur(object):
         return x
 
 
-def all_in_aug():
+def get_all_in_aug(img_size=imageSize):
     all_in_transform = transforms.Compose(
         [
             transforms.Resize((300, 300)),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.ColorJitter(brightness=[0.5, 1.5]),
             transforms.RandomRotation(degrees=15),
-            transforms.CenterCrop((224, 224)),
+            transforms.CenterCrop((img_size, img_size)),
+            transforms.RandomApply([GaussianBlur([0.1, 2.0])], p=0.5),
             transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            normalize,
         ]
     )
     return all_in_transform
 
 
-def get_aug_trnsform():
+def get_aug_trnsform(img_size=imageSize):
     transform = transforms.Compose(
         [
-            transforms.RandomResizedCrop(224, scale=(0.2, 1.0)),
+            transforms.RandomResizedCrop(img_size, scale=(0.2, 1.0)),
             transforms.RandomApply(
                 [
                     transforms.ColorJitter(
@@ -55,8 +56,12 @@ def get_aug_trnsform():
     return transform
 
 
-def get_eval_trnsform():
+def get_eval_trnsform(img_size=imageSize):
     transform = transforms.Compose(
-        [transforms.Resize((224, 224)), transforms.ToTensor(), normalize]
+        [
+            transforms.Resize((img_size, img_size)),
+            transforms.ToTensor(),
+            normalize,
+        ]
     )
     return transform

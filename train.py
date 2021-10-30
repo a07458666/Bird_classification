@@ -8,7 +8,12 @@ from torch import nn
 from tqdm import tqdm
 from torch import optim
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import MultiStepLR, StepLR, ReduceLROnPlateau
+from torch.optim.lr_scheduler import (
+    MultiStepLR,
+    StepLR,
+    ReduceLROnPlateau,
+    CosineAnnealingLR,
+)
 from matplotlib import pyplot as plt
 from torch.cuda.amp import GradScaler, autocast
 
@@ -21,6 +26,8 @@ from src.txt_loading.txt_loader import (
 from src.loss_functions.CrossEntropyLS import CrossEntropyLS
 from torch.utils.tensorboard import SummaryWriter
 from src.models.swin_transformer import SwinTransformer
+from bottleneck_transformer_pytorch import BottleStack
+
 
 def main(args):
     writer = create_writer(args)
@@ -28,7 +35,7 @@ def main(args):
     class_to_idx = readClassIdx(args)
     data_list = readTrainImages(args)
     train_data_list, val_data_list, _ = splitDataList(data_list, 0.9, 0.1)
-    model = create_model(args, device)
+    model = create_model(args).to(device)
     train_loader, val_loader = create_dataloader(
         args, train_data_list, val_data_list, class_to_idx
     )
@@ -71,23 +78,60 @@ def update_loss_hist(args, train_list, val_list, name="result"):
     plt.clf()
 
 
-def create_model(args, device):
+def create_model_BotNet(args):
+    from torchvision.models import resnet50
+
+    layer = BottleStack(
+        dim=256,
+        fmap_size=56,  # set specifically for imagenet's 224 x 224
+        dim_out=2048,
+        proj_factor=4,
+        downsample=True,
+        heads=4,
+        dim_head=128,
+        rel_pos_emb=True,
+        activation=nn.ReLU(),
+    )
+
+    resnet = resnet50(pretrained=True)
+
+    # model surgery
+
+    backbone = list(resnet.children())
+
+    model = nn.Sequential(
+        *backbone[:5],
+        layer,
+        nn.AdaptiveAvgPool2d((1, 1)),
+        nn.Flatten(1),
+        nn.Linear(2048, 200),
+    )
+    # use the 'BotNet'
+
+    # img = torch.randn(2, 3, 224, 224)
+    # preds = model(img) # (2, 1000)
+    return model
+
+
+def create_model(args):
     import timm
+
     # backbone = timm.create_model(
     #     "vit_base_patch16_224_miil_in21k", pretrained=True
     # )
     backbone = SwinTransformer(
-        img_size = 224,
-        window_size = 7,
-        embed_dim = 192,
-        depths = [ 2, 2, 18, 2 ],
-        num_heads = [ 6, 12, 24, 48 ],
-        num_classes = 21841,
-        drop_path_rate = 0.1)
-    if args.pretrain_model_path != '':
+        img_size=224,
+        window_size=7,
+        embed_dim=192,
+        depths=[2, 2, 18, 2],
+        num_heads=[6, 12, 24, 48],
+        num_classes=21841,
+        drop_path_rate=0.2,
+    )
+    if args.pretrain_model_path != "":
         # backbone = torch.load(args.pretrain_model_path).to(device)
-        checkpoint = torch.load(args.pretrain_model_path, map_location='cpu') 
-        msg = backbone.load_state_dict(checkpoint['model'], strict=False) 
+        checkpoint = torch.load(args.pretrain_model_path, map_location="cpu")
+        msg = backbone.load_state_dict(checkpoint["model"], strict=False)
         # backbone.load_state_dict(torch.load(args.pretrain_model_path)['model']).to(device)
         # set_parameter_requires_grad(backbone, True)
     projector = nn.Sequential(
@@ -99,7 +143,7 @@ def create_model(args, device):
         nn.LeakyReLU(),
         nn.Linear(512, 200),
     )
-    model = nn.Sequential(backbone, projector).to(device)
+    model = nn.Sequential(backbone, projector)
     return model
 
 
@@ -204,7 +248,7 @@ def create_writer(args):
     from torch.utils.tensorboard import SummaryWriter
 
     writer = SummaryWriter("runs/" + args.output_foloder)
-    msg = ''
+    msg = ""
     for key in vars(args):
         msg += "{} = {}<br>".format(key, vars(args)[key])
     writer.add_text("Parameter", msg, 0)
@@ -226,7 +270,7 @@ def train(args, model, train_loader, val_loader, writer, device):
         momentum=args.momentum,
         weight_decay=args.weight_decay,
     )
-    model_scheduler = ReduceLROnPlateau(model_optimizer, "min")
+    model_scheduler = CosineAnnealingLR(model_optimizer, T_max=20)
     torch.save(model, "{}/checkpoint.pth.tar".format(args.output_foloder))
     loss_fn = CrossEntropyLS(args.label_smooth)
     scaler = GradScaler()
@@ -254,7 +298,7 @@ def train(args, model, train_loader, val_loader, writer, device):
                 device,
                 "Eval",
             )
-        model_scheduler.step(val_loss)
+        model_scheduler.step()
 
         writer.add_scalars(
             "loss", {"train": train_loss, "val": val_loss}, epoch
@@ -284,15 +328,14 @@ def train(args, model, train_loader, val_loader, writer, device):
         )
         if val_loss <= min_val_loss:
             min_val_loss = val_loss
+            print("Best, save model, epoch = {}".format(epoch))
             torch.save(
                 model,
-                "{}/checkpoint.pth.tar".format(
-                    args.output_foloder
-                ),
+                "{}/checkpoint.pth.tar".format(args.output_foloder),
             )
         else:
             stop += 1
-            if stop > 5:
+            if stop > 10:
                 print("early stopping")
                 break
     torch.cuda.empty_cache()

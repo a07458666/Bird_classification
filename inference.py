@@ -51,7 +51,7 @@ def checkGPU():
 def loadModel(args, device):
     with torch.no_grad():
         model = torch.load(args.model_path)
-        #model.load_state_dict(torch.load(args.model_path_dict)["state_dict"])
+        # model.load_state_dict(torch.load(args.model_path_dict)["state_dict"])
         model.eval().to(device)
     return model
 
